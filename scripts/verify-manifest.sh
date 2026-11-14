@@ -37,11 +37,11 @@ printf 'manifest: %s\n' "${manifests[@]}"
 packages=$(cat "${manifests[@]}" | cut -d' ' -f1 | sort -u)
 
 if [ "$target" = "hc5962" ]; then
-	required="luci-theme-vantage
+	required="luci-theme-vantage luci-i18n-vantage-theme-zh-cn
 kmod-mt7603 kmod-mt76x2 kmod-usb3"
 else
 	required="honk luci-app-honk luci-lib-daeuniverse luci-theme-vantage
-vmlinux-btf-builtin libstdcpp kmod-veth
+luci-i18n-vantage-theme-zh-cn vmlinux-btf-builtin libstdcpp kmod-veth
 kmod-sched-core kmod-sched-bpf kmod-nft-core kmod-nft-queue kmod-nfnetlink-queue
 kmod-nf-conntrack v2ray-geoip v2ray-geosite nftables-json firewall4"
 fi
