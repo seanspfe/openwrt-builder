@@ -44,7 +44,8 @@ require_not_set() {
 
 echo "== LuCI theme (all targets)"
 for symbol in \
-	PACKAGE_luci-theme-vantage
+	PACKAGE_luci-theme-vantage \
+	PACKAGE_luci-i18n-vantage-theme-zh-cn
 do
 	require_y "$symbol"
 done
