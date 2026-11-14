@@ -96,6 +96,10 @@ if [ "$config_name" != "hc5962" ]; then
 	else
 		pass "KERNEL_DEBUG_INFO is enabled"
 	fi
+
+	echo "== BPF toolchain (selected through daed's patched BPF_DEPENDS)"
+	require_y NEED_BPF_TOOLCHAIN
+	require_y USE_LLVM_BUILD
 else
 	echo "== proxy stacks stay out (mipsel is not a dae/daed build target)"
 	require_not_set PACKAGE_honk
