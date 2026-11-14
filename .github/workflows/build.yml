@@ -173,7 +173,7 @@ jobs:
           bpf-linker --version
 
       - name: Prepare OpenWrt tree
-        run: ./scripts/prepare-tree.sh
+        run: bash scripts/prepare-tree.sh
 
       - name: Merge config
         working-directory: .src/openwrt
@@ -186,7 +186,7 @@ jobs:
 
       - name: Verify merged config
         run: |
-          ./scripts/verify-config.sh "${{ matrix.target }}" "$SRC_ROOT/openwrt"
+          bash scripts/verify-config.sh "${{ matrix.target }}" "$SRC_ROOT/openwrt"
 
       - name: Download package sources
         working-directory: .src/openwrt
@@ -202,7 +202,7 @@ jobs:
           make -j"$(nproc)" 2>&1 | tee "$GITHUB_WORKSPACE/build-${{ matrix.target }}.log"
 
       - name: Verify image contents
-        run: ./scripts/verify-manifest.sh "${{ matrix.target }}" "$SRC_ROOT/openwrt"
+        run: bash scripts/verify-manifest.sh "${{ matrix.target }}" "$SRC_ROOT/openwrt"
 
       - name: Collect images
         run: |
