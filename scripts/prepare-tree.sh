@@ -154,4 +154,17 @@ fi
 grep -q 'BPF_DEPENDS' "$daed_makefile" ||
 	die "failed to add BPF_DEPENDS to $daed_makefile"
 
+# The daed source snapshot (2026.11.09) has a go.mod requiring Go >= 1.27,
+# but the pinned packages feed defaults the host Go to 1.26
+# (GO_DEFAULT_VERSION in lang/golang/golang-values.mk), so daed fails with
+# "go.mod requires go >= 1.27.0 (running go 1.26.9; GOTOOLCHAIN=local)".
+# golang-values.mk derives the host Go version from a golang<ver>/host entry
+# in PKG_BUILD_DEPENDS, and the same feed already ships a golang1.27 package,
+# so point daed at that instead of the versionless golang/host.
+if grep -q '^PKG_BUILD_DEPENDS:=golang/host' "$daed_makefile"; then
+	sed -i 's|^PKG_BUILD_DEPENDS:=golang/host|PKG_BUILD_DEPENDS:=golang1.27/host|' "$daed_makefile"
+fi
+grep -q '^PKG_BUILD_DEPENDS:=golang1.27/host' "$daed_makefile" ||
+	die "failed to switch daed to golang1.27/host in $daed_makefile"
+
 log "Build tree ready: $openwrt_dir"
