@@ -1,0 +1,39 @@
+diff --git a/honk/Makefile b/honk/Makefile
+index 3d62327..1234567 100644
+--- a/honk/Makefile
++++ b/honk/Makefile
+@@ -88,14 +88,30 @@ define Build/Prepare
+ 	$(CP) $(HONK_SRC)/. $(PKG_BUILD_DIR)/
+ endef
+ 
++# Rust build environment.
++HONK_RUST_HOME?=$(if $(wildcard $(HOME)/.cargo/bin/cargo),$(HOME),/home/runner)
++HONK_RUSTUP_HOME?=$(HONK_RUST_HOME)/.rustup
++HONK_CARGO_HOME?=$(HONK_RUST_HOME)/.cargo
++HONK_CARGO_JOBS?=2
++
++HONK_TARGET_ARCH = $(strip $(if $(ARCH_PACKAGES),$(ARCH_PACKAGES),$(if $(filter x86_64,$(ARCH)),x86_64,$(if $(findstring aarch64,$(ARCH)$(TARGET_CROSS)$(CONFIG_TARGET_ARCH_PACKAGES)),aarch64_cortex-a53,$(ARCH)))))
++HONK_TOOLCHAIN_BIN = $(strip $(if $(wildcard $(TOOLCHAIN_DIR)/bin),$(TOOLCHAIN_DIR)/bin,$(STAGING_DIR)/toolchain-$(GNU_TARGET_NAME)/bin))
++HONK_CC = $(strip $(if $(wildcard $(TOOLCHAIN_DIR)/bin/$(TARGET_CROSS)gcc),$(TOOLCHAIN_DIR)/bin/$(TARGET_CROSS)gcc,$(TARGET_CC)))
++HONK_CXX = $(strip $(if $(wildcard $(TOOLCHAIN_DIR)/bin/$(TARGET_CROSS)g++),$(TOOLCHAIN_DIR)/bin/$(TARGET_CROSS)g++,$(TARGET_CXX)))
++
+ define Build/Compile
++	RUSTUP_HOME="$(HONK_RUSTUP_HOME)" \
++	CARGO_HOME="$(HONK_CARGO_HOME)" \
++	PATH="$(HONK_CARGO_HOME)/bin:$(HONK_TOOLCHAIN_BIN):$(STAGING_DIR)/host/bin:/usr/bin:/bin:$$PATH" \
++	CARGO_PROFILE_RELEASE_LTO=false \
++	CARGO_BUILD_JOBS="$(HONK_CARGO_JOBS)" \
+ 	HONK_SRC="$(PKG_BUILD_DIR)" \
+ 	HONK_VERSION="$(PKG_VERSION)" \
+ 	HONK_GIT_TAG="$(HONK_GIT_TAG)" \
+-	HONK_ARCH_PACKAGES="$(ARCH_PACKAGES)" \
+-	OPENWRT_CC="$(TARGET_CROSS)gcc" \
+-	OPENWRT_CXX="$(TARGET_CROSS)g++" \
+-	sh "$(PKG_DIR)/build.sh"
++	HONK_ARCH_PACKAGES="$(HONK_TARGET_ARCH)" \
++	OPENWRT_CC="$(HONK_CC)" \
++	OPENWRT_CXX="$(HONK_CXX)" \
++	/bin/bash "$(PKG_DIR)/build.sh"
+ endef
+ 
+ define Package/honk/conffiles
