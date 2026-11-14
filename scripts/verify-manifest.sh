@@ -1,0 +1,121 @@
+#!/usr/bin/env bash
+#
+# Check the built image: the firmware's package manifest has to contain the
+# packages this build promises and must not contain the excluded ones. For the
+# honk targets it also checks that the kernel really was built with the BTF
+# options, because a successful build says nothing about them.
+#
+# usage: verify-manifest.sh <x86_64|gl-mt3000|hc5962> <openwrt-dir>
+#
+set -euo pipefail
+
+target=${1:?usage: verify-manifest.sh <x86_64|gl-mt3000|hc5962> <openwrt-dir>}
+openwrt_dir=${2:?usage: verify-manifest.sh <x86_64|gl-mt3000|hc5962> <openwrt-dir>}
+
+case "$target" in
+x86_64) target_dir=$openwrt_dir/bin/targets/x86/64 ;;
+gl-mt3000) target_dir=$openwrt_dir/bin/targets/mediatek/filogic ;;
+hc5962) target_dir=$openwrt_dir/bin/targets/ramips/mt7621 ;;
+*) echo "error: unknown target '$target'" >&2; exit 1 ;;
+esac
+
+[ -d "$target_dir" ] || { echo "error: $target_dir does not exist" >&2; exit 1; }
+
+failures=0
+checks=0
+pass() { checks=$((checks + 1)); printf '  ok   %s\n' "$1"; }
+fail() { checks=$((checks + 1)); failures=$((failures + 1)); printf '  FAIL %s\n' "$1"; }
+
+# The firmware images are the ones with a manifest next to them.
+mapfile -t manifests < <(find "$target_dir" -maxdepth 1 -name '*.manifest' | sort)
+[ "${#manifests[@]}" -gt 0 ] ||
+	{ echo "error: no *.manifest in $target_dir" >&2; exit 1; }
+printf 'manifest: %s\n' "${manifests[@]}"
+
+# With per-device rootfs an image has one manifest per device; the union of all
+# lines is what matters here.
+packages=$(cat "${manifests[@]}" | cut -d' ' -f1 | sort -u)
+
+if [ "$target" = "hc5962" ]; then
+	required="luci-theme-vantage luci-i18n-vantage-theme-zh-cn
+kmod-mt7603 kmod-mt76x2 kmod-usb3"
+else
+	required="honk luci-app-honk luci-lib-daeuniverse luci-theme-vantage
+luci-i18n-vantage-theme-zh-cn vmlinux-btf-builtin libstdcpp kmod-veth
+kmod-sched-core kmod-sched-bpf kmod-nft-core kmod-nft-queue kmod-nfnetlink-queue
+kmod-nf-conntrack v2ray-geoip v2ray-geosite nftables-json firewall4"
+fi
+
+echo "== required packages in the image"
+for package in $required; do
+	pattern="^$package\$"
+	if [ "$package" = "libstdcpp" ]; then
+		pattern='^libstdcpp[0-9]*$'
+	fi
+	if printf '%s\n' "$packages" | grep -Eq "$pattern"; then
+		pass "$package"
+	else
+		fail "$package is missing from the image"
+	fi
+done
+
+if [ "$target" = "x86_64" ]; then
+	echo "== x86/64 NIC drivers in the image"
+	for package in kmod-e100 kmod-e1000 kmod-e1000e kmod-igb kmod-igbvf \
+		kmod-igc kmod-r8169 kmod-vmxnet3 kmod-tg3 kmod-forcedeth \
+		kmod-bnx2 kmod-ixgbe kmod-i40e
+	do
+		if printf '%s\n' "$packages" | grep -qx "$package"; then
+			pass "$package"
+		else
+			fail "$package is missing from the image"
+		fi
+	done
+fi
+
+echo "== excluded packages"
+excluded="bridger ua3f golang"
+if [ "$target" = "hc5962" ]; then
+	excluded="$excluded honk"
+fi
+for package in $excluded; do
+	if printf '%s\n' "$packages" | grep -qx "$package"; then
+		fail "$package is in the image and must not be"
+	else
+		pass "$package is absent"
+	fi
+done
+
+if [ "$target" != "hc5962" ]; then
+	echo "== kernel was built with BTF"
+	kernel_config=$(find "$openwrt_dir/build_dir" -maxdepth 6 -path '*/target-*/linux-*/linux-6.12.*/.config' 2>/dev/null | head -n1)
+	if [ -z "$kernel_config" ]; then
+		kernel_config=$(find "$openwrt_dir/build_dir" -maxdepth 6 -path '*/linux-6.12.*/.config' ! -path '*/toolchain-*' 2>/dev/null | head -n1)
+	fi
+	if [ -n "$kernel_config" ]; then
+		for symbol in CONFIG_DEBUG_INFO_BTF=y CONFIG_DEBUG_INFO_BTF_MODULES=y; do
+			if grep -qx "$symbol" "$kernel_config"; then
+				pass "${symbol%%=*} in the kernel build config"
+			else
+				fail "${symbol%%=*} is missing from $kernel_config"
+			fi
+		done
+	else
+		# Not fatal: the kernel config is pruned after the build in some versions.
+		printf '  skip kernel build config not found under %s/build_dir\n' "$openwrt_dir"
+	fi
+fi
+
+printf '\n%s checks, %s failed\n' "$checks" "$failures"
+if [ "$failures" -ne 0 ]; then
+	echo "error: the image does not match the specification" >&2
+	exit 1
+fi
+
+echo "== stage images for artifact collection"
+mkdir -p "$openwrt_dir/bin/targets" "out/$target"
+find "$target_dir" -maxdepth 1 -type f \
+	\( -name "*.img.gz" -o -name "*.bin" -o -name "*.manifest" \
+	   -o -name "*.buildinfo" -o -name "sha256sums" -o -name "profiles.json" \) \
+	-exec cp -f {} "$openwrt_dir/bin/targets/" \; \
+	-exec cp -f {} "out/$target/" \;
