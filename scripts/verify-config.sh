@@ -56,33 +56,34 @@ require_not_set PACKAGE_bridger
 require_not_set PACKAGE_golang
 
 if [ "$config_name" != "hc5962" ]; then
-	echo "== honk and its LuCI front end"
+	echo "== daed and its LuCI front end"
 	for symbol in \
-		PACKAGE_honk \
-		PACKAGE_luci-app-honk \
-		PACKAGE_luci-lib-daeuniverse \
-		PACKAGE_vmlinux-btf-builtin
+		PACKAGE_daed \
+		PACKAGE_luci-app-daede
 	do
 		require_y "$symbol"
 	done
 
-	echo "== honk runtime dependencies"
+	echo "== daed runtime dependencies"
 	for symbol in \
-		PACKAGE_libstdcpp \
+		PACKAGE_ca-bundle \
 		PACKAGE_kmod-veth \
 		PACKAGE_kmod-sched-core \
 		PACKAGE_kmod-sched-bpf \
-		PACKAGE_kmod-nft-core \
-		PACKAGE_kmod-nft-queue \
-		PACKAGE_kmod-nfnetlink-queue \
-		PACKAGE_kmod-nf-conntrack \
 		PACKAGE_v2ray-geoip \
 		PACKAGE_v2ray-geosite \
-		PACKAGE_nftables-json \
 		PACKAGE_firewall4
 	do
 		require_y "$symbol"
 	done
+
+	echo "== honk stack stays out (replaced by daed on this branch)"
+	require_not_set PACKAGE_honk
+	require_not_set PACKAGE_luci-app-honk
+	require_not_set PACKAGE_luci-lib-daeuniverse
+	require_not_set PACKAGE_vmlinux-btf-builtin
+	require_not_set PACKAGE_vmlinux-btf
+	require_not_set PACKAGE_dae
 
 	echo "== kernel BTF for eBPF CO-RE"
 	require_y KERNEL_DEBUG_INFO_BTF
@@ -96,9 +97,11 @@ if [ "$config_name" != "hc5962" ]; then
 		pass "KERNEL_DEBUG_INFO is enabled"
 	fi
 else
-	echo "== honk stays out (mipsel is not a honk build target)"
+	echo "== proxy stacks stay out (mipsel is not a dae/daed build target)"
 	require_not_set PACKAGE_honk
 	require_not_set PACKAGE_luci-app-honk
+	require_not_set PACKAGE_daed
+	require_not_set PACKAGE_luci-app-daede
 fi
 
 case "$config_name" in
