@@ -139,4 +139,19 @@ installed_luci=$openwrt_dir/package/feeds/openwrt_daede/luci-app-daede
 grep -q "^PKG_VERSION:=$DAED_VERSION" "$installed_daed/Makefile" ||
 	die "daed PKG_VERSION is not $DAED_VERSION at $installed_daed/Makefile"
 
+# The feed's daed Makefile includes bpf.mk but never declares $(BPF_DEPENDS),
+# so selecting daed does not select NEED_BPF_TOOLCHAIN, the BPF toolchain
+# choice never produces a clang, and bpf.mk falls back to /invalid/clang:
+# package/kernel/bpf-headers then fails with "LLVM/clang version too old".
+# Declare the dependency the package actually has. With NEED_BPF_TOOLCHAIN
+# selected, the toolchain choice defaults to building OpenWrt's own LLVM
+# (CONFIG_USE_LLVM_BUILD), which is promptless and cannot be set from a seed
+# config, so this patch is the only place the fix can live.
+daed_makefile=$daede_dir/daed/Makefile
+if ! grep -q 'BPF_DEPENDS' "$daed_makefile"; then
+	sed -i 's|DEPENDS:=$(GO_ARCH_DEPENDS)|DEPENDS:=$(GO_ARCH_DEPENDS) $(BPF_DEPENDS)|' "$daed_makefile"
+fi
+grep -q 'BPF_DEPENDS' "$daed_makefile" ||
+	die "failed to add BPF_DEPENDS to $daed_makefile"
+
 log "Build tree ready: $openwrt_dir"
