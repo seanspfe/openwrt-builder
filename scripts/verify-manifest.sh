@@ -2,7 +2,7 @@
 #
 # Check the built image: the firmware's package manifest has to contain the
 # packages this build promises and must not contain the excluded ones. For the
-# honk targets it also checks that the kernel really was built with the BTF
+# daed targets it also checks that the kernel really was built with the BTF
 # options, because a successful build says nothing about them.
 #
 # usage: verify-manifest.sh <x86_64|gl-mt3000|hc5962> <openwrt-dir>
@@ -40,18 +40,14 @@ if [ "$target" = "hc5962" ]; then
 	required="luci-theme-vantage luci-i18n-vantage-theme-zh-cn
 kmod-mt7603 kmod-mt76x2 kmod-usb3"
 else
-	required="honk luci-app-honk luci-lib-daeuniverse luci-theme-vantage
-luci-i18n-vantage-theme-zh-cn vmlinux-btf-builtin libstdcpp kmod-veth
-kmod-sched-core kmod-sched-bpf kmod-nft-core kmod-nft-queue kmod-nfnetlink-queue
-kmod-nf-conntrack v2ray-geoip v2ray-geosite nftables-json firewall4"
+	required="daed luci-app-daede luci-theme-vantage
+luci-i18n-vantage-theme-zh-cn ca-bundle kmod-veth
+kmod-sched-core kmod-sched-bpf v2ray-geoip v2ray-geosite firewall4"
 fi
 
 echo "== required packages in the image"
 for package in $required; do
 	pattern="^$package\$"
-	if [ "$package" = "libstdcpp" ]; then
-		pattern='^libstdcpp[0-9]*$'
-	fi
 	if printf '%s\n' "$packages" | grep -Eq "$pattern"; then
 		pass "$package"
 	else
@@ -74,9 +70,9 @@ if [ "$target" = "x86_64" ]; then
 fi
 
 echo "== excluded packages"
-excluded="bridger ua3f golang"
+excluded="bridger ua3f golang honk luci-app-honk luci-lib-daeuniverse dae vmlinux-btf vmlinux-btf-builtin"
 if [ "$target" = "hc5962" ]; then
-	excluded="$excluded honk"
+	excluded="$excluded daed luci-app-daede"
 fi
 for package in $excluded; do
 	if printf '%s\n' "$packages" | grep -qx "$package"; then
