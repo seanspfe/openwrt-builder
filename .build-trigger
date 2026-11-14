@@ -1,1 +1,1 @@
-build 2026-11-14 #2: start initial build, targets all (x86_64, gl-mt3000, hc5962), OpenWrt v25.12.6 + honk v0.1.0-beta.6
+build 2026-11-14 #3: rebuild after fixing script exec permission via bash invocation, targets all (x86_64, gl-mt3000, hc5962), OpenWrt v25.12.6 + honk v0.1.0-beta.6
